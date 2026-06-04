@@ -1,0 +1,18 @@
+#!/bin/sh
+# De-ASI-INTERFACE pre-push hook
+# Runs ruff lint on Python files before push
+# Iterative file scan — no recursion
+
+if command -v ruff > /dev/null 2>&1; then
+  echo "Running ruff lint..."
+  ruff check . --ignore E501
+  if [ $? -ne 0 ]; then
+    echo "[BLOCKED] Lint errors detected. Fix before pushing."
+    exit 1
+  fi
+  echo "[OK] Lint passed."
+else
+  echo "[SKIP] ruff not installed — skipping lint."
+fi
+
+exit 0

@@ -1,0 +1,27 @@
+#!/bin/sh
+# De-ASI-INTERFACE pre-commit hook
+# Blocks commits containing hardcoded secrets or private keys
+# Iterative grep scan — no recursion
+
+SECRET_PATTERNS="private_key|secret_key|PRIVATE_KEY|SECRET_KEY|BEGIN RSA|BEGIN EC"
+
+FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+FOUND=0
+for FILE in $FILES; do
+  if echo "$FILE" | grep -qE '\.(py|ts|js|sh|json|env)$'; then
+    if git show ":$FILE" | grep -qE "$SECRET_PATTERNS"; then
+      echo "[BLOCKED] Potential hardcoded secret in: $FILE"
+      FOUND=1
+    fi
+  fi
+done
+
+if [ $FOUND -eq 1 ]; then
+  echo ""
+  echo "Commit blocked. Remove hardcoded secrets and use .env instead."
+  exit 1
+fi
+
+echo "[OK] Pre-commit secret scan passed."
+exit 0
