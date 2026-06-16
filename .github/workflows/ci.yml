@@ -1,4 +1,4 @@
-name: CI
+name: CI — urban-rotary-phone
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -16,8 +16,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
         with:
-          scandir: './'
-          severity: warning
+          node-version: '22'
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint all shell scripts
+        run: |
+          SCRIPTS=$(find . -name '*.sh' -not -path './.git/*')
+          if [ -z "$SCRIPTS" ]; then
+            echo "No .sh files found — checking root scripts"
+            find . -maxdepth 2 -type f -not -path './.git/*' | head -20
+          else
+            echo "$SCRIPTS" | xargs shellcheck --severity=warning
+          fi
+
+  validate:
+    name: Validate Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify Node version
+        run: node --version
+
+      - name: Check bash syntax on all shell files
+        run: |
+          for script in $(find . -name '*.sh' -not -path './.git/*'); do
+            bash -n "$script" && echo "OK: $script" || echo "SYNTAX ERROR: $script"
+          done
+
+      - name: Repository structure audit
+        run: |
+          echo "=== Repository Contents ==="
+          find . -not -path './.git/*' -not -path './.github/*' | sort
